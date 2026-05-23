@@ -315,8 +315,8 @@ input[type=file]{display:none}
       <div class="gs-card">
         <div class="gs-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 3 12 7 16"/><polyline points="17 8 21 12 17 16"/><line x1="14" y1="4" x2="10" y2="20"/></svg> 部署 Apps Script（一次性設定）</div>
         <div class="step-list">
-          <div class="step-item"><div class="step-num">1</div><div class="step-text">開啟SPTT賬號的 Google 試算表，確認有兩個工作表分別命名為 <strong>「耗材庫存」</strong> 和 <strong>「出入庫記錄」</strong></div></div>
-          <div class="step-item"><div class="step-num">2</div><div class="step-text">點上方選單 <strong>擴充功能 → Apps Script</strong>，刪除舊內容，貼上下方程式碼，並把 <strong>SS_ID</strong> 換成試算表 ID</div></div>
+          <div class="step-item"><div class="step-num">1</div><div class="step-text">開啟SPTT賬號的 Google sheet，確認有兩個工作表分別命名為 <strong>「耗材庫存」</strong> 和 <strong>「出入庫記錄」</strong></div></div>
+          <div class="step-item"><div class="step-num">2</div><div class="step-text">點上方選單 <strong>擴充功能 → Apps Script</strong>，刪除舊內容，貼上下方程式碼，並把 <strong>SS_ID</strong> 換成google sheet ID</div></div>
           <div class="step-item"><div class="step-num">3</div><div class="step-text"><strong>如何找到試算表 ID：</strong>開啟 Google 試算表，網址列長這樣：<br><code style="font-size:11px;background:var(--bg2);padding:2px 6px;border-radius:4px">https://docs.google.com/spreadsheets/d/<strong>【這段就是ID】</strong>/edit</code></div></div>
           <div class="step-item"><div class="step-num">4</div><div class="step-text">點 <strong>部署 → 新增部署 → 類型選「網頁應用程式」</strong><br>執行身分：<strong>我</strong>　　存取權：<strong>所有人</strong>（含匿名）</div></div>
           <div class="step-item"><div class="step-num">5</div><div class="step-text">複製部署後的網址，貼到上方「Apps Script Web App 網址」欄位，按<strong>測試連線</strong>確認成功後，按<strong>同步到 Sheets</strong></div></div>
@@ -696,7 +696,14 @@ function deleteItem(id) {
     document.getElementById('detailPanel').classList.remove('open');
   }
   renderAll();
-  scheduleSync();
+  // 立即送出刪除，不等 debounce（刪除是破壞性操作，需即時同步）
+  gsPost({ action: 'deleteSupply', id }).then(r => {
+    if (r && r.success) {
+      addSyncLog('✅ 已從 Sheets 刪除「' + s.name + '」');
+    } else if (r) {
+      addSyncLog('⚠️ 刪除失敗：' + JSON.stringify(r));
+    }
+  });
   notify('已刪除「' + s.name + '」');
 }
 
@@ -716,10 +723,15 @@ function submitTxn() {
   const s = supplies.find(x => x.id === id); if (!s) return;
   if (type === 'out' && qty > s.stock) return alert('庫存不足！目前：' + s.stock + ' ' + s.unit);
   s.stock += type === 'in' ? qty : -qty;
-  logs.unshift({ date, name: s.name, type, qty, unit: s.unit, person, note });
+  const newLog = { date, name: s.name, type, qty, unit: s.unit, person, note };
+  logs.unshift(newLog);
   closeModal();
   renderAll();
-  scheduleSync();
+  // 立即同步庫存變動 + 新增記錄
+  gsPost({ action: 'updateSupply', supply: { id: s.id, stock: s.stock } })
+    .then(r => r && r.success ? addSyncLog('✅ 庫存已同步') : addSyncLog('⚠️ 庫存同步失敗'));
+  gsPost({ action: 'addLog', log: newLog })
+    .then(r => r && r.success ? addSyncLog('✅ 記錄已同步') : addSyncLog('⚠️ 記錄同步失敗'));
   notify((type === 'in' ? '↑ 入庫' : '↓ 出庫') + ' ' + s.name + ' ' + qty + s.unit);
 }
 
@@ -742,7 +754,7 @@ function openModal(type, sid) {
         <div class="fg"><label>類別</label>
           <select id="f-cat"><option>貼紮</option><option>耗材</option><option>工具</option><option>其他</option></select></div>
         <div class="fg"><label>存放位置</label>
-          <input id="f-loc" value="${s ? s.location : ''}" placeholder="例：櫃子的xx"></div>
+          <input id="f-loc" value="${s ? s.location : ''}" placeholder="例：櫃子的XX"></div>
         <div class="fg"><label>初始庫存</label>
           <input id="f-stock" type="number" value="${s ? s.stock : 0}" min="0"></div>
         <div class="fg"><label>單位</label>
@@ -1046,7 +1058,9 @@ async function saveAdd() {
   supplies.push(newItem);
   closeModal();
   renderAll();
-  scheduleSync();
+  // 立即新增到 Sheets
+  gsPost({ action: 'addSupply', supply: { ...newItem, photo: newItem.photo.startsWith('data:') ? '' : newItem.photo } })
+    .then(r => r && r.success ? addSyncLog('✅ 已新增「' + name + '」到 Sheets') : addSyncLog('⚠️ 新增失敗：' + JSON.stringify(r)));
   notify('✓ 已新增「' + name + '」');
 }
 async function saveEdit(id) {
@@ -1065,7 +1079,10 @@ async function saveEdit(id) {
   selectedId = null;
   document.getElementById('detailPanel').classList.remove('open');
   renderAll();
-  scheduleSync();
+  // 立即更新到 Sheets
+  const payload = { ...s, photo: s.photo && s.photo.startsWith('data:') ? '' : s.photo };
+  gsPost({ action: 'updateSupply', supply: payload })
+    .then(r => r && r.success ? addSyncLog('✅ 已更新「' + name + '」到 Sheets') : addSyncLog('⚠️ 更新失敗：' + JSON.stringify(r)));
   notify('✓ 已更新「' + name + '」');
 }
 
