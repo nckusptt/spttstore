@@ -343,6 +343,7 @@ function doPost(e) {
     if (action === 'deleteSupply') return ok(deleteSupply(body.id));
     if (action === 'addLog')       return ok(addLog(body.log));
     if (action === 'uploadPhoto')  return ok(uploadPhoto(body.id, body.photo));
+    if (action === 'deletePhoto')  return ok(deletePhotoAction(body.id, body.photoUrl));
     if (action === 'saveAll')      return ok(saveAll(body.data));
     return ok({ error: 'unknown action' });
   } catch(err) {
@@ -379,6 +380,26 @@ function getPhotoFolder() {
   return DriveApp.createFolder(PHOTO_FOLDER);
 }
 
+// ── 刪除照片：清空 Sheets photo 欄 + 刪除 Drive 檔案 ──
+function deletePhotoAction(supplyId, photoUrl) {
+  try {
+    // 1. 清空 Sheets 的 photo 欄
+    updateSupply({ id: supplyId, photo: '' });
+    // 2. 從 Drive URL 取出 file ID 並刪除
+    if (photoUrl && photoUrl.includes('id=')) {
+      const fileId = photoUrl.split('id=')[1].split('&')[0];
+      try {
+        DriveApp.getFileById(fileId).setTrashed(true);
+      } catch(e) {
+        // 找不到檔案就略過（可能已手動刪除）
+      }
+    }
+    return { success: true };
+  } catch(err) {
+    return { error: err.message };
+  }
+}
+
 // ── 批次存檔（saveAll） ──
 function saveAll(data) {
   const ss = SpreadsheetApp.openById(SS_ID);
@@ -407,7 +428,7 @@ function updateSupply(s) {
   const hdr  = data[0];
   const idCol = hdr.indexOf('id');
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][idCol]) === String(s.id)) {
+    if (data[i][idCol] == s.id) {
       hdr.forEach(function(h, c) {
         if (s[h] !== undefined) sheet.getRange(i+1, c+1).setValue(s[h]);
       });
@@ -420,8 +441,9 @@ function deleteSupply(id) {
   const sheet = SpreadsheetApp.openById(SS_ID).getSheetByName(SUPPLY_SHEET);
   const data  = sheet.getDataRange().getValues();
   const idCol = data[0].indexOf('id');
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][idCol]) === String(id)) {
+  for (let i = data.length - 1; i >= 1; i--) {
+    // 用 == 而非 === 避免數字/字串型別不同導致比對失敗
+    if (data[i][idCol] == id) {
       sheet.deleteRow(i + 1);
       return { success: true };
     }
@@ -697,11 +719,15 @@ function deleteItem(id) {
   }
   renderAll();
   // 立即送出刪除，不等 debounce（刪除是破壞性操作，需即時同步）
-  gsPost({ action: 'deleteSupply', id }).then(r => {
+  addSyncLog('🗑️ 傳送刪除 id=' + id + ' 中…');
+  gsPost({ action: 'deleteSupply', id: String(id) }).then(r => {
+    addSyncLog('回應：' + JSON.stringify(r));
     if (r && r.success) {
       addSyncLog('✅ 已從 Sheets 刪除「' + s.name + '」');
     } else if (r) {
       addSyncLog('⚠️ 刪除失敗：' + JSON.stringify(r));
+      // 失敗時用 saveAll 作為備援
+      scheduleSync();
     }
   });
   notify('已刪除「' + s.name + '」');
@@ -742,6 +768,7 @@ function openModal(type, sid) {
   const overlay = document.getElementById('modalOverlay');
   const inner   = document.getElementById('modalInner');
   pendingPhoto  = '';
+  _clearExistingPhoto = false;
 
   if (type === 'add' || type === 'edit') {
     const s = type === 'edit' ? supplies.find(x => x.id === sid) : null;
@@ -957,6 +984,7 @@ async function uploadPhotoFromDetail(event, id) {
 function deletePhoto(id) {
   const s = supplies.find(x => x.id === id); if (!s) return;
   if (!confirm('確定刪除「' + s.name + '」的照片？')) return;
+  const oldPhoto = s.photo;
   s.photo = '';
   renderInventory();
   // 若 detail panel 開著，重新渲染
@@ -965,7 +993,14 @@ function deletePhoto(id) {
     selectedId = null;
     setTimeout(() => selectItem(id), 50);
   }
-  scheduleSync();
+  // 立即同步到 Sheets（清空 photo 欄位 + 刪除 Drive 檔案）
+  addSyncLog('🗑️ 刪除照片中…');
+  gsPost({ action: 'deletePhoto', id: String(id), photoUrl: oldPhoto })
+    .then(r => {
+      addSyncLog('回應：' + JSON.stringify(r));
+      if (r && r.success) addSyncLog('✅ 照片已從 Sheets 和 Drive 刪除');
+      else addSyncLog('⚠️ 照片刪除失敗：' + JSON.stringify(r));
+    });
   notify('已刪除照片');
 }
 
@@ -973,7 +1008,10 @@ function deletePhoto(id) {
 function clearModalPhoto() {
   pendingPhoto = '';
   document.getElementById('fPrev').innerHTML = '';
+  // 若是編輯模式（供 saveEdit 使用），標記需清除照片
+  _clearExistingPhoto = true;
 }
+let _clearExistingPhoto = false;
 
 // Modal 裡的照片預覽（保持本地預覽，儲存時一起送）
 function previewPhoto(input, prevId) {
@@ -1074,7 +1112,16 @@ async function saveEdit(id) {
   s.min      = parseInt(document.getElementById('f-min').value) || 5;
   s.location = document.getElementById('f-loc').value;
   s.notes    = document.getElementById('f-notes').value;
-  if (pendingPhoto) s.photo = await resolvePhoto(id) || s.photo;
+  if (pendingPhoto) {
+    s.photo = await resolvePhoto(id) || s.photo;
+  } else if (_clearExistingPhoto && s.photo) {
+    // 使用者在 Modal 按了叉叉刪除現有照片
+    const oldPhoto = s.photo;
+    s.photo = '';
+    addSyncLog('🗑️ 刪除照片中…');
+    gsPost({ action: 'deletePhoto', id: String(id), photoUrl: oldPhoto })
+      .then(r => r && r.success ? addSyncLog('✅ 照片已從 Sheets 和 Drive 刪除') : addSyncLog('⚠️ 照片刪除失敗：' + JSON.stringify(r)));
+  }
   closeModal();
   selectedId = null;
   document.getElementById('detailPanel').classList.remove('open');
