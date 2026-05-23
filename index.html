@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>社團耗材管理系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
+<!-- Tabler icon font removed: using inline SVG -->
+<style>
+:root{
+  --bg:#ffffff;--bg2:#f8f7f4;--bg3:#f1f0ec;
+  --text:#1a1a18;--text2:#6b6a65;--text3:#a09f9a;
+  --border:rgba(0,0,0,0.10);--border2:rgba(0,0,0,0.18);
+  --r:8px;--rl:12px;
+  --green-bg:#EAF3DE;--green:#3B6D11;
+  --amber-bg:#FAEEDA;--amber:#854F0B;
+  --red-bg:#FCEBEB;--red:#A32D2D;
+  --blue-bg:#E6F1FB;--blue:#0C447C;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg3);color:var(--text);font-size:14px;line-height:1.5}
+a{color:inherit}
+
+.layout{display:flex;min-height:100vh}
+.sidebar{width:220px;min-width:220px;background:var(--bg);border-right:0.5px solid var(--border);padding:1.25rem 0;display:flex;flex-direction:column}
+.sidebar-logo{display:flex;align-items:center;gap:10px;padding:0 1.25rem 1.5rem;border-bottom:0.5px solid var(--border)}
+.sidebar-logo i{font-size:20px;color:var(--text2)}
+.sidebar-logo span{font-size:15px;font-weight:500}
+.nav-section{padding:.75rem 1.25rem .25rem;font-size:11px;color:var(--text3);letter-spacing:.05em;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 1.25rem;font-size:13px;color:var(--text2);cursor:pointer;transition:background .15s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--bg2);color:var(--text)}
+.nav-item.active{background:var(--bg2);color:var(--text);font-weight:500}
+.nav-item i{font-size:16px}
+.sidebar-footer{margin-top:auto;padding:1rem 1.25rem;border-top:0.5px solid var(--border)}
+.gs-dot{width:7px;height:7px;border-radius:50%;background:#ccc;display:inline-block;margin-right:5px}
+.gs-dot.connected{background:var(--green)}
+
+.main{flex:1;padding:1.5rem 2rem;overflow-x:hidden}
+.page{display:none}.page.active{display:block}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px}
+.page-title{font-size:17px;font-weight:500}
+.topbar-actions{display:flex;gap:8px}
+
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem}
+.stat-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rl);padding:14px 16px}
+.stat-label{font-size:11px;color:var(--text2);margin-bottom:4px}
+.stat-val{font-size:22px;font-weight:500}
+.stat-val.ok{color:var(--green)}.stat-val.warn{color:var(--amber)}.stat-val.bad{color:var(--red)}
+
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
+.toolbar-left{display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap}
+.toolbar input,.toolbar select{height:34px;border:0.5px solid var(--border2);border-radius:var(--r);padding:0 10px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);outline:none}
+.toolbar input{flex:1;min-width:130px;max-width:200px}
+.toolbar input:focus,.toolbar select:focus{border-color:#378ADD}
+.view-toggle{display:inline-flex;background:var(--bg2);border:0.5px solid var(--border2);border-radius:10px;padding:3px;gap:3px;flex-shrink:0}
+.vbtn{width:34px;height:34px;border:none;background:transparent;cursor:pointer;color:var(--text2);font-size:16px;border-radius:7px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
+.vbtn:hover{background:rgba(0,0,0,.06);color:var(--text)}
+.vbtn.active{background:var(--bg);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+
+.supply-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.supply-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rl);overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.supply-card:hover{border-color:var(--border2);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.card-img{height:110px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:38px;position:relative;overflow:hidden}
+.card-img img{width:100%;height:100%;object-fit:cover}
+.card-img-btn{position:absolute;bottom:6px;right:6px;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--r);width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .15s}
+.supply-card:hover .card-img-btn{opacity:1}
+/* 無照片時：置中上傳按鈕 */
+.card-img-btn-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);bottom:auto;right:auto;width:36px;height:36px;border-radius:var(--rl);opacity:0}
+.supply-card:hover .card-img-btn-center{opacity:1}
+/* 有照片時：右上角兩個按鈕 */
+.card-img-actions{position:absolute;top:6px;right:6px;display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.supply-card:hover .card-img-actions{opacity:1}
+.card-img-actions .card-img-btn{position:static;opacity:1;width:24px;height:24px}
+.card-del-btn{background:var(--red-bg) !important;border-color:#F09595 !important;color:var(--red) !important}
+/* placeholder icon 置中 */
+.ph-icon{display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+.card-body{padding:10px 12px}
+.card-name{font-size:13px;font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-meta{font-size:11px;color:var(--text3);margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-stock{display:flex;align-items:center;justify-content:space-between}
+.stock-num{font-size:15px;font-weight:500;color:var(--text)}
+.stock-num.s-ok{color:var(--green)}.stock-num.s-low{color:var(--red)}
+.stock-unit{font-size:11px;color:var(--text3)}
+
+.badge{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500;white-space:nowrap}
+.b-ok{background:var(--green-bg);color:var(--green)}
+.b-warn{background:var(--amber-bg);color:var(--amber)}
+.b-low{background:var(--red-bg);color:var(--red)}
+.b-in{background:var(--green-bg);color:var(--green)}
+.b-out{background:var(--red-bg);color:var(--red)}
+.b-blue{background:var(--blue-bg);color:var(--blue)}
+
+.table-wrap{border:0.5px solid var(--border);border-radius:var(--rl);overflow:hidden;background:var(--bg)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+th{background:var(--bg2);padding:9px 13px;text-align:left;font-weight:500;font-size:11px;color:var(--text2);border-bottom:0.5px solid var(--border)}
+td{padding:9px 13px;border-bottom:0.5px solid var(--border);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg2)}
+.td-img{width:34px;height:34px;border-radius:var(--r);object-fit:cover;border:0.5px solid var(--border);display:block}
+.td-ph{width:34px;height:34px;border-radius:var(--r);background:var(--bg2);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:17px}
+
+.detail-panel{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem;display:none;gap:1rem}
+.detail-panel.open{display:flex;flex-wrap:wrap}
+.detail-img{width:155px;min-width:155px;height:125px;border-radius:var(--r);background:var(--bg2);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:44px;overflow:hidden}
+.detail-img img{width:100%;height:100%;object-fit:cover}
+.detail-info{flex:1;min-width:200px}
+.detail-name{font-size:16px;font-weight:500;margin-bottom:3px}
+.detail-meta{font-size:12px;color:var(--text2);margin-bottom:10px}
+.detail-row{display:flex;gap:8px;margin-bottom:6px;font-size:13px;flex-wrap:wrap;align-items:center}
+.detail-label{color:var(--text2);min-width:60px;font-size:12px}
+
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:var(--r);font-size:13px;cursor:pointer;border:0.5px solid var(--border2);background:var(--bg);color:var(--text);font-family:inherit;transition:background .15s;white-space:nowrap}
+.btn:hover{background:var(--bg2)}
+.btn-primary{background:var(--text);color:var(--bg);border-color:var(--text)}
+.btn-primary:hover{opacity:.85}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-danger{color:var(--red);border-color:#F09595}
+.btn-danger:hover{background:var(--red-bg)}
+
+input[type=file]{display:none}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg);border-radius:var(--rl);border:0.5px solid var(--border);padding:1.5rem;width:460px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem}
+.mh h3{font-size:15px;font-weight:500}
+.mc-btn{background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;line-height:1;padding:2px}
+.mc-btn:hover{color:var(--text)}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.fg label{font-size:12px;color:var(--text2)}
+.fg input,.fg select,.fg textarea{height:36px;border:0.5px solid var(--border2);border-radius:var(--r);padding:0 10px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);outline:none;width:100%}
+.fg textarea{height:auto;padding:8px 10px;resize:vertical}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#378ADD}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fg-full{grid-column:1/-1}
+.mf{display:flex;justify-content:flex-end;gap:8px;margin-top:1.25rem;padding-top:1rem;border-top:0.5px solid var(--border)}
+
+.upload-zone{border:0.5px dashed var(--border2);border-radius:var(--r);padding:1.25rem;text-align:center;cursor:pointer;background:var(--bg2);transition:background .15s}
+.upload-zone:hover{background:var(--bg3)}
+.upload-zone i{font-size:24px;color:var(--text2);display:block;margin-bottom:6px}
+.upload-zone p{font-size:12px;color:var(--text2)}
+.photo-prev{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.photo-thumb{width:56px;height:56px;border-radius:var(--r);object-fit:cover;border:0.5px solid var(--border)}
+
+.gs-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem}
+.gs-title{font-size:14px;font-weight:500;margin-bottom:.75rem;display:flex;align-items:center;gap:7px}
+.gs-btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:.75rem}
+.gs-status-row{display:flex;align-items:center;gap:10px;margin-top:.75rem}
+.gs-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 10px;border-radius:20px}
+.gs-idle{background:var(--bg2);color:var(--text2)}
+.gs-ok{background:var(--green-bg);color:var(--green)}
+.gs-err{background:var(--red-bg);color:var(--red)}
+.sync-log{font-size:12px;color:var(--text2);margin-top:.5rem;font-family:monospace;line-height:1.7;max-height:80px;overflow-y:auto;background:var(--bg2);border-radius:var(--r);padding:6px 10px;display:none}
+.sync-log.has-content{display:block}
+
+.code-block{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);padding:12px;font-family:monospace;font-size:11.5px;color:var(--text2);line-height:1.75;overflow-x:auto;max-height:260px;overflow-y:auto;white-space:pre}
+.step-list{counter-reset:step;margin-bottom:1rem}
+.step-item{display:flex;gap:12px;margin-bottom:.75rem;font-size:13px;align-items:flex-start}
+.step-num{width:22px;height:22px;min-width:22px;border-radius:50%;background:var(--text);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;margin-top:1px}
+.step-text{color:var(--text2);line-height:1.6}
+.step-text strong{color:var(--text)}
+
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--text3)}
+.empty-state i{font-size:32px;display:block;margin-bottom:.5rem}
+
+.notif{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--text);color:var(--bg);padding:10px 18px;border-radius:var(--rl);font-size:13px;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none}
+.notif.show{opacity:1}
+
+@media(max-width:640px){
+  .layout{flex-direction:column}
+  .sidebar{width:100%;min-width:unset;flex-direction:row;flex-wrap:wrap;padding:.75rem 1rem;gap:4px;border-right:none;border-bottom:0.5px solid var(--border)}
+  .sidebar-logo{padding:0;border-bottom:none;margin-right:auto}
+  .nav-section{display:none}
+  .nav-item{width:auto;padding:6px 10px;border-radius:var(--r)}
+  .sidebar-footer{display:none}
+  .main{padding:1rem}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 4.5v9L12 21l-9-4.5v-9L12 3z"/><polyline points="12 3 12 12"/><line x1="3" y1="7.5" x2="12" y2="12"/><line x1="21" y1="7.5" x2="12" y2="12"/></svg>
+      <span>耗材管理</span>
+    </div>
+    <div class="nav-section">主選單</div>
+    <button class="nav-item active" data-page="inventory">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> 庫存總覽
+    </button>
+    <button class="nav-item" data-page="log">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg> 出入庫記錄
+    </button>
+    <button class="nav-item" data-page="gs">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.945 11a9 9 0 1 1 -3.284 -5.997l-2.655 2.392a5.5 5.5 0 1 0 2.119 6.605h-4.125v-3h7.945z"/></svg> Google Sheets 串接
+    </button>
+    <div class="sidebar-footer">
+      <div style="font-size:12px;color:var(--text3);display:flex;align-items:center">
+        <span class="gs-dot" id="sideGsDot"></span>
+        <span id="sideGsText">尚未連線</span>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <div class="page active" id="page-inventory">
+      <div class="topbar">
+        <div class="page-title">庫存總覽</div>
+        <div class="topbar-actions">
+          <button class="btn btn-sm" onclick="openModal('add')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 新增耗材</button>
+          <button class="btn btn-sm btn-primary" onclick="openModal('txn')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg> 出入庫</button>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">耗材種類</div><div class="stat-val" id="s-total">0</div></div>
+        <div class="stat-card"><div class="stat-label">庫存充足</div><div class="stat-val ok" id="s-ok">0</div></div>
+        <div class="stat-card"><div class="stat-label">庫存偏低</div><div class="stat-val warn" id="s-warn">0</div></div>
+        <div class="stat-card"><div class="stat-label">庫存不足</div><div class="stat-val bad" id="s-low">0</div></div>
+      </div>
+      <div id="detailPanel" class="detail-panel"></div>
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <input type="text" id="search" placeholder="搜尋耗材名稱…" oninput="renderInventory()">
+          <select id="catFilter" onchange="renderInventory()">
+            <option value="">全部類別</option>
+            <option>貼紮</option><option>耗材</option><option>工具</option><option>其他</option>
+          </select>
+          <select id="statusFilter" onchange="renderInventory()">
+            <option value="">全部狀態</option>
+            <option value="ok">充足</option><option value="warn">偏低</option><option value="low">不足</option>
+          </select>
+        </div>
+        <div class="view-toggle">
+          <button class="vbtn active" id="vbtn-grid" onclick="setView('grid')" title="卡片模式">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </button>
+          <button class="vbtn" id="vbtn-list" onclick="setView('list')" title="列表模式">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="gridView" class="supply-grid"></div>
+      <div id="listView" class="table-wrap" style="display:none">
+        <table>
+          <thead><tr>
+            <th style="width:44px"></th>
+            <th>耗材名稱</th>
+            <th style="width:58px">類別</th>
+            <th style="width:65px">庫存</th>
+            <th style="width:50px">單位</th>
+            <th style="width:60px">狀態</th>
+            <th style="width:70px">位置</th>
+            <th style="width:75px">操作</th>
+          </tr></thead>
+          <tbody id="listBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="page" id="page-log">
+      <div class="topbar">
+        <div class="page-title">出入庫記錄</div>
+        <button class="btn btn-sm btn-primary" onclick="openModal('txn')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 新增記錄</button>
+      </div>
+      <div class="toolbar">
+        <input type="text" id="logSearch" placeholder="搜尋耗材或操作人…" oninput="renderLog()" style="max-width:240px">
+        <select id="logType" onchange="renderLog()">
+          <option value="">全部類型</option>
+          <option value="in">入庫</option><option value="out">出庫</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:88px">日期</th>
+            <th>耗材</th>
+            <th style="width:55px">類型</th>
+            <th style="width:52px">數量</th>
+            <th style="width:45px">單位</th>
+            <th style="width:78px">操作人</th>
+            <th>備註</th>
+          </tr></thead>
+          <tbody id="logBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="page" id="page-gs">
+      <div class="topbar">
+        <div class="page-title">Google Sheets 串接</div>
+      </div>
+
+      <div class="gs-card">
+        <div class="gs-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l-4 4 7 7 4-4"/><path d="M17 17l4-4-7-7-4 4"/><line x1="8" y1="16" x2="16" y2="8"/><line x1="3" y1="21" x2="6" y2="18"/></svg> 連線設定</div>
+        <div class="fg"><label>Apps Script Web App 網址</label>
+          <input type="text" id="gsUrl" placeholder="https://script.google.com/macros/s/…/exec">
+        </div>
+        <div class="gs-btn-row">
+          <button class="btn btn-sm" onclick="gsTest()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l-4 4 7 7 4-4"/><path d="M17 17l4-4-7-7-4 4"/><line x1="8" y1="16" x2="16" y2="8"/><line x1="3" y1="21" x2="6" y2="18"/></svg> 測試連線</button>
+          <button class="btn btn-sm" onclick="gsPull()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 18a3.5 3.5 0 0 0 0-7h-0.5A5 5 0 1 0 6 13.5"/><polyline points="12 13 12 21"/><polyline points="9 18 12 21 15 18"/></svg> 從 Sheets 載入</button>
+          <button class="btn btn-sm btn-primary" onclick="gsPush()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 18a3.5 3.5 0 0 0 0-7h-0.5A5 5 0 1 0 6 13.5"/><polyline points="12 21 12 13"/><polyline points="9 16 12 13 15 16"/></svg> 同步到 Sheets</button>
+        </div>
+        <div class="gs-status-row">
+          <span class="gs-badge gs-idle" id="gsBadge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg> 未連線</span>
+          <span style="font-size:12px;color:var(--text3)" id="gsLastSync"></span>
+        </div>
+        <div class="sync-log" id="syncLog"></div>
+      </div>
+
+      <div class="gs-card">
+        <div class="gs-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 3 12 7 16"/><polyline points="17 8 21 12 17 16"/><line x1="14" y1="4" x2="10" y2="20"/></svg> 部署 Apps Script（一次性設定）</div>
+        <div class="step-list">
+          <div class="step-item"><div class="step-num">1</div><div class="step-text">開啟SPTT賬號的 Google 試算表，確認有兩個工作表分別命名為 <strong>「耗材庫存」</strong> 和 <strong>「出入庫記錄」</strong></div></div>
+          <div class="step-item"><div class="step-num">2</div><div class="step-text">點上方選單 <strong>擴充功能 → Apps Script</strong>，刪除舊內容，貼上下方程式碼，並把 <strong>SS_ID</strong> 換成試算表 ID</div></div>
+          <div class="step-item"><div class="step-num">3</div><div class="step-text"><strong>如何找到試算表 ID：</strong>開啟 Google 試算表，網址列長這樣：<br><code style="font-size:11px;background:var(--bg2);padding:2px 6px;border-radius:4px">https://docs.google.com/spreadsheets/d/<strong>【這段就是ID】</strong>/edit</code></div></div>
+          <div class="step-item"><div class="step-num">4</div><div class="step-text">點 <strong>部署 → 新增部署 → 類型選「網頁應用程式」</strong><br>執行身分：<strong>我</strong>　　存取權：<strong>所有人</strong>（含匿名）</div></div>
+          <div class="step-item"><div class="step-num">5</div><div class="step-text">複製部署後的網址，貼到上方「Apps Script Web App 網址」欄位，按<strong>測試連線</strong>確認成功後，按<strong>同步到 Sheets</strong></div></div>
+          <div class="step-item"><div class="step-num">6</div><div class="step-text">下次接手的團長只需填入網址，按「從 Sheets 載入」就能取回所有資料 ✓</div></div>
+        </div>
+        <div class="code-block" id="codeBlock">const SS_ID        = '你的試算表ID';  // ← 換成你的ID
+const SUPPLY_SHEET = '耗材庫存';
+const LOG_SHEET    = '出入庫記錄';
+const PHOTO_FOLDER = '耗材照片';
+
+function doGet(e) {
+  const action = e.parameter.action;
+  if (action === 'ping')   return ok({ status: 'ok' });
+  if (action === 'getAll') return ok(getAllData());
+  return ok({ error: 'unknown action' });
+}
+
+function doPost(e) {
+  try {
+    const body   = JSON.parse(e.postData.contents);
+    const action = body.action;
+    if (action === 'addSupply')    return ok(addSupply(body.supply));
+    if (action === 'updateSupply') return ok(updateSupply(body.supply));
+    if (action === 'deleteSupply') return ok(deleteSupply(body.id));
+    if (action === 'addLog')       return ok(addLog(body.log));
+    if (action === 'uploadPhoto')  return ok(uploadPhoto(body.id, body.photo));
+    if (action === 'saveAll')      return ok(saveAll(body.data));
+    return ok({ error: 'unknown action' });
+  } catch(err) {
+    return ok({ error: err.message });
+  }
+}
+
+// ── 照片上傳：base64 → Drive → 公開縮圖 URL ──
+function uploadPhoto(supplyId, base64DataUrl) {
+  try {
+    const parts  = base64DataUrl.split(',');
+    const mime   = parts[0].split(':')[1].split(';')[0];       // e.g. image/jpeg
+    const ext    = mime.split('/')[1];
+    const blob   = Utilities.newBlob(
+      Utilities.base64Decode(parts[1]), mime,
+      'supply_' + supplyId + '.' + ext
+    );
+    const folder = getPhotoFolder();
+    // 刪除同名舊檔
+    const old = folder.getFilesByName(blob.getName());
+    while (old.hasNext()) old.next().setTrashed(true);
+    // 上傳並公開
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return { url: 'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w400' };
+  } catch(err) {
+    return { error: err.message };
+  }
+}
+
+function getPhotoFolder() {
+  const folders = DriveApp.getFoldersByName(PHOTO_FOLDER);
+  if (folders.hasNext()) return folders.next();
+  return DriveApp.createFolder(PHOTO_FOLDER);
+}
+
+// ── 批次存檔（saveAll） ──
+function saveAll(data) {
+  const ss = SpreadsheetApp.openById(SS_ID);
+  if (data.supplies) jsonToSheet(ss.getSheetByName(SUPPLY_SHEET), data.supplies);
+  if (data.logs)     jsonToSheet(ss.getSheetByName(LOG_SHEET),    data.logs);
+  return { saved: true };
+}
+
+// ── 單筆 CRUD ──
+function getAllData() {
+  const ss = SpreadsheetApp.openById(SS_ID);
+  return {
+    supplies: sheetToJson(ss.getSheetByName(SUPPLY_SHEET)),
+    logs:     sheetToJson(ss.getSheetByName(LOG_SHEET))
+  };
+}
+function addSupply(s) {
+  const sheet = SpreadsheetApp.openById(SS_ID).getSheetByName(SUPPLY_SHEET);
+  ensureHeaders(sheet, ['id','name','cat','stock','unit','min','location','notes','photo']);
+  sheet.appendRow([s.id,s.name,s.cat,s.stock,s.unit,s.min,s.location,s.notes,s.photo||'']);
+  return { success: true };
+}
+function updateSupply(s) {
+  const sheet = SpreadsheetApp.openById(SS_ID).getSheetByName(SUPPLY_SHEET);
+  const data = sheet.getDataRange().getValues();
+  const hdr  = data[0];
+  const idCol = hdr.indexOf('id');
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][idCol]) === String(s.id)) {
+      hdr.forEach(function(h, c) {
+        if (s[h] !== undefined) sheet.getRange(i+1, c+1).setValue(s[h]);
+      });
+      return { success: true };
+    }
+  }
+  return { error: '找不到 id: ' + s.id };
+}
+function deleteSupply(id) {
+  const sheet = SpreadsheetApp.openById(SS_ID).getSheetByName(SUPPLY_SHEET);
+  const data  = sheet.getDataRange().getValues();
+  const idCol = data[0].indexOf('id');
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][idCol]) === String(id)) {
+      sheet.deleteRow(i + 1);
+      return { success: true };
+    }
+  }
+  return { error: '找不到 id: ' + id };
+}
+function addLog(log) {
+  const sheet = SpreadsheetApp.openById(SS_ID).getSheetByName(LOG_SHEET);
+  ensureHeaders(sheet, ['date','name','type','qty','unit','person','note']);
+  sheet.appendRow([log.date,log.name,log.type,log.qty,log.unit,log.person,log.note||'']);
+  return { success: true };
+}
+function ensureHeaders(sheet, headers) {
+  if (!sheet) return;
+  if (sheet.getLastRow() === 0) sheet.appendRow(headers);
+}
+function sheetToJson(sheet) {
+  if (!sheet) return [];
+  const vals = sheet.getDataRange().getValues();
+  if (vals.length < 2) return [];
+  const hdr = vals[0];
+  return vals.slice(1).map(function(r) {
+    return Object.fromEntries(hdr.map(function(h, i) { return [h, r[i]]; }));
+  });
+}
+function jsonToSheet(sheet, arr) {
+  if (!sheet || !arr || !arr.length) return;
+  const hdr = Object.keys(arr[0]);
+  sheet.clearContents();
+  sheet.appendRow(hdr);
+  arr.forEach(function(r) {
+    sheet.appendRow(hdr.map(function(h) { return r[h] !== undefined ? r[h] : ''; }));
+  });
+}
+function ok(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}</div>
+        <button class="btn btn-sm" style="margin-top:.75rem" onclick="copyCode()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg> 複製程式碼</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalInner"></div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+// ─────────────────────────────────────────────
+//  常數 & 初始資料
+// ─────────────────────────────────────────────
+const EMOJIS = {貼紮:'🩹',耗材:'📦',工具:'🔧',其他:'🗂️'};
+
+// 通用圖片佔位圖示（無照片時顯示）
+const PLACEHOLDER_SVG = `<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text3)"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="10" r="2"/><polyline points="2 20 8 14 12 18 15 15 22 20"/><circle cx="19" cy="7" r="3" fill="var(--bg)" stroke="currentColor" stroke-width="1.5"/><line x1="19" y1="5.5" x2="19" y2="8.5"/><line x1="17.5" y1="7" x2="20.5" y2="7"/></svg>`;
+const PLACEHOLDER_SVG_SMALL = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text3)"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="10" r="2"/><polyline points="2 20 8 14 12 18 15 15 22 20"/><circle cx="19" cy="7" r="3" fill="var(--bg)" stroke="currentColor" stroke-width="1.5"/><line x1="19" y1="5.5" x2="19" y2="8.5"/><line x1="17.5" y1="7" x2="20.5" y2="7"/></svg>`;
+const ST  = (s, m) => s <= 0 ? 'low' : s <= m ? 'warn' : 'ok';
+const SL  = {low:'不足', warn:'偏低', ok:'充足'};
+const SB  = {low:'b-low', warn:'b-warn', ok:'b-ok'};
+
+let supplies = [
+  
+];
+let logs = [
+
+];
+let nextId     = 1;
+let viewMode   = 'grid';
+let selectedId = null;
+let pendingPhoto = '';
+let gsConnected  = false;
+let autoSyncTimer = null;
+let isSyncing     = false;
+
+// ─────────────────────────────────────────────
+//  通知 & 狀態
+// ─────────────────────────────────────────────
+function notify(msg) {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
+}
+function addSyncLog(msg) {
+  const el = document.getElementById('syncLog');
+  el.classList.add('has-content');
+  el.innerHTML = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + el.innerHTML;
+}
+function setGsStatus(type, text) {
+  const b = document.getElementById('gsBadge');
+  b.className = 'gs-badge gs-' + type;
+  const icon = type === 'ok' ? 'check' : type === 'err' ? 'x' : 'circle';
+  const iconSvgs = {
+    check: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 10 17 19 7"/></svg>',
+    x:     '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>',
+    circle:'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>'
+  };
+  b.innerHTML = (iconSvgs[icon] || '') + ' ' + text;
+  gsConnected = (type === 'ok');
+  document.getElementById('sideGsDot').className = 'gs-dot' + (gsConnected ? ' connected' : '');
+  document.getElementById('sideGsText').textContent = gsConnected ? 'Sheets 已連線' : '尚未連線';
+}
+
+// ─────────────────────────────────────────────
+//  統計 & 渲染
+// ─────────────────────────────────────────────
+function getST(s) { return ST(s.stock, s.min); }
+function updateStats() {
+  document.getElementById('s-total').textContent = supplies.length;
+  document.getElementById('s-ok').textContent   = supplies.filter(s => getST(s) === 'ok').length;
+  document.getElementById('s-warn').textContent  = supplies.filter(s => getST(s) === 'warn').length;
+  document.getElementById('s-low').textContent   = supplies.filter(s => getST(s) === 'low').length;
+}
+function getFiltered() {
+  const q   = document.getElementById('search').value.toLowerCase();
+  const cat = document.getElementById('catFilter').value;
+  const sf  = document.getElementById('statusFilter').value;
+  return supplies.filter(s =>
+    s.name.toLowerCase().includes(q) &&
+    (!cat || s.cat === cat) &&
+    (!sf  || getST(s) === sf)
+  );
+}
+function setView(v) {
+  viewMode = v;
+  document.getElementById('vbtn-grid').classList.toggle('active', v === 'grid');
+  document.getElementById('vbtn-list').classList.toggle('active', v === 'list');
+  document.getElementById('gridView').style.display = v === 'grid' ? '' : 'none';
+  document.getElementById('listView').style.display = v === 'list' ? '' : 'none';
+  renderInventory();
+}
+function renderInventory() { renderGrid(getFiltered()); renderList(getFiltered()); }
+function renderGrid(data) {
+  document.getElementById('gridView').innerHTML = data.length ? data.map(s => {
+    const st  = getST(s);
+    const imgHtml = s.photo
+      ? `<img src="${s.photo}" alt="${s.name}">`
+      : `<div class="ph-icon">${PLACEHOLDER_SVG}</div>`;
+    const overlayBtns = s.photo
+      ? `<div class="card-img-actions" onclick="event.stopPropagation()">
+           <label class="card-img-btn" title="更換照片">
+             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+             <input type="file" accept="image/*" onchange="uploadPhoto(event,${s.id})">
+           </label>
+           <button class="card-img-btn card-del-btn" onclick="deletePhoto(${s.id})" title="刪除照片">
+             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+           </button>
+         </div>`
+      : `<label class="card-img-btn card-img-btn-center" onclick="event.stopPropagation()" title="上傳照片">
+           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+           <input type="file" accept="image/*" onchange="uploadPhoto(event,${s.id})">
+         </label>`;
+    return `<div class="supply-card" onclick="selectItem(${s.id})">
+      <div class="card-img">${imgHtml}
+        ${overlayBtns}
+      </div>
+      <div class="card-body">
+        <div class="card-name" title="${s.name}">${s.name}</div>
+        <div class="card-meta">${s.cat}${s.location ? ' · ' + s.location : ''}</div>
+        <div class="card-stock">
+          <span class="stock-num ${st === 'ok' ? 's-ok' : st === 'low' ? 's-low' : ''}">${s.stock}</span>
+          <span class="stock-unit">${s.unit}</span>
+          <span class="badge ${SB[st]}">${SL[st]}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty-state"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 4.5v9L12 21l-9-4.5v-9L12 3z"/><polyline points="12 3 12 12"/><line x1="3" y1="7.5" x2="12" y2="12"/><line x1="21" y1="7.5" x2="12" y2="12"/></svg>無符合耗材</div>';
+}
+function renderList(data) {
+  const body = document.getElementById('listBody');
+  body.innerHTML = data.length ? data.map(s => {
+    const st    = getST(s);
+    const thumb = s.photo
+      ? `<img class="td-img" src="${s.photo}" alt="${s.name}">`
+      : `<div class="td-ph"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text3)"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="10" r="2"/><polyline points="2 20 8 14 12 18 15 15 22 20"/><circle cx="19" cy="7" r="2.5" fill="var(--bg)" stroke="currentColor" stroke-width="1.5"/><line x1="19" y1="5.8" x2="19" y2="8.2"/><line x1="17.8" y1="7" x2="20.2" y2="7"/></svg></div>`;
+    return `<tr style="cursor:pointer" onclick="selectItem(${s.id})">
+      <td>${thumb}</td>
+      <td style="font-weight:500">${s.name}</td>
+      <td style="color:var(--text2)">${s.cat}</td>
+      <td style="font-weight:500">${s.stock}</td>
+      <td style="color:var(--text3)">${s.unit}</td>
+      <td><span class="badge ${SB[st]}">${SL[st]}</span></td>
+      <td style="color:var(--text3);font-size:12px">${s.location || '—'}</td>
+      <td>
+        <button class="btn btn-sm" onclick="event.stopPropagation();editItem(${s.id})" title="編輯">
+          編輯
+        </button>
+        <button class="btn btn-sm btn-danger" style="margin-left:3px"
+          onclick="event.stopPropagation();deleteItem(${s.id})" title="刪除">
+          刪除
+        </button>
+      </td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">無符合項目</td></tr>';
+}
+function selectItem(id) {
+  const panel = document.getElementById('detailPanel');
+  if (selectedId === id) { selectedId = null; panel.classList.remove('open'); return; }
+  selectedId = id;
+  const s = supplies.find(x => x.id === id); if (!s) return;
+  const st  = getST(s);
+  const detailImgHtml = s.photo
+    ? `<img src="${s.photo}" alt="${s.name}" style="width:100%;height:100%;object-fit:cover">`
+    : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%">${PLACEHOLDER_SVG}</div>`;
+  const detailPhotoBtn = s.photo
+    ? `<button class="btn btn-sm btn-danger" onclick="deletePhoto(${s.id});document.getElementById('detailPanel').classList.remove('open');selectedId=null">
+         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg> 刪除照片
+       </button>`
+    : `<label class="btn btn-sm" style="cursor:pointer">
+         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> 上傳照片
+         <input type="file" accept="image/*" style="display:none" onchange="uploadPhotoFromDetail(event,${s.id})">
+       </label>`;
+  panel.innerHTML = `
+    <div class="detail-img">${detailImgHtml}</div>
+    <div class="detail-info">
+      <div class="detail-name">${s.name}</div>
+      <div class="detail-meta">${s.cat}${s.location ? ' · ' + s.location : ''}</div>
+      <div class="detail-row">
+        <span class="detail-label">庫存</span>
+        <span style="font-weight:500">${s.stock} ${s.unit}</span>
+        <span class="badge ${SB[st]}">${SL[st]}</span>
+      </div>
+      <div class="detail-row"><span class="detail-label">警示值</span><span>${s.min} ${s.unit}</span></div>
+      ${s.notes ? `<div class="detail-row"><span class="detail-label">備註</span><span style="color:var(--text2)">${s.notes}</span></div>` : ''}
+      <div style="display:flex;gap:6px;margin-top:.75rem;flex-wrap:wrap">
+        ${detailPhotoBtn}
+        <button class="btn btn-sm" onclick="openTxnFor(${s.id})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg> 出入庫</button>
+        <button class="btn btn-sm" onclick="editItem(${s.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> 編輯</button>
+        <button class="btn btn-sm" onclick="document.getElementById('detailPanel').classList.remove('open');selectedId=null">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg> 關閉
+        </button>
+      </div>
+    </div>`;
+  panel.classList.add('open');
+}
+function renderLog() {
+  const q    = document.getElementById('logSearch').value.toLowerCase();
+  const t    = document.getElementById('logType').value;
+  const body = document.getElementById('logBody');
+  const data = logs.filter(l =>
+    (l.name.toLowerCase().includes(q) || l.person.toLowerCase().includes(q)) &&
+    (!t || l.type === t)
+  );
+  body.innerHTML = data.length ? data.map(l => `<tr>
+    <td style="font-size:12px;color:var(--text2)">${l.date}</td>
+    <td style="font-weight:500">${l.name}</td>
+    <td><span class="badge ${l.type === 'in' ? 'b-in' : 'b-out'}">${l.type === 'in' ? '入庫' : '出庫'}</span></td>
+    <td style="font-weight:500">${l.qty}</td>
+    <td style="color:var(--text3)">${l.unit}</td>
+    <td>${l.person}</td>
+    <td style="color:var(--text2);font-size:12px">${l.note || '—'}</td>
+  </tr>`).join('')
+  : '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:2rem">無記錄</td></tr>';
+}
+function renderAll() { updateStats(); renderInventory(); renderLog(); }
+
+// ─────────────────────────────────────────────
+//  CRUD 操作
+// ─────────────────────────────────────────────
+function editItem(id) { openModal('edit', id); }
+
+function deleteItem(id) {
+  const s = supplies.find(x => x.id === id); if (!s) return;
+  if (!confirm('確定刪除「' + s.name + '」？')) return;
+  supplies = supplies.filter(x => x.id !== id);
+  if (selectedId === id) {
+    selectedId = null;
+    document.getElementById('detailPanel').classList.remove('open');
+  }
+  renderAll();
+  scheduleSync();
+  notify('已刪除「' + s.name + '」');
+}
+
+function openTxnFor(id) {
+  closeModal();
+  setTimeout(() => openModal('txn', id), 50);
+}
+
+function submitTxn() {
+  const id     = parseInt(document.getElementById('t-item').value);
+  const type   = document.getElementById('t-type').value;
+  const qty    = parseInt(document.getElementById('t-qty').value) || 0;
+  const person = document.getElementById('t-person').value || '—';
+  const date   = document.getElementById('t-date').value;
+  const note   = document.getElementById('t-note').value;
+  if (!qty) return alert('請輸入數量');
+  const s = supplies.find(x => x.id === id); if (!s) return;
+  if (type === 'out' && qty > s.stock) return alert('庫存不足！目前：' + s.stock + ' ' + s.unit);
+  s.stock += type === 'in' ? qty : -qty;
+  logs.unshift({ date, name: s.name, type, qty, unit: s.unit, person, note });
+  closeModal();
+  renderAll();
+  scheduleSync();
+  notify((type === 'in' ? '↑ 入庫' : '↓ 出庫') + ' ' + s.name + ' ' + qty + s.unit);
+}
+
+// ─────────────────────────────────────────────
+//  Modal
+// ─────────────────────────────────────────────
+function openModal(type, sid) {
+  const overlay = document.getElementById('modalOverlay');
+  const inner   = document.getElementById('modalInner');
+  pendingPhoto  = '';
+
+  if (type === 'add' || type === 'edit') {
+    const s = type === 'edit' ? supplies.find(x => x.id === sid) : null;
+    inner.innerHTML = `
+      <div class="mh"><h3>${s ? '編輯耗材' : '新增耗材'}</h3>
+        <button class="mc-btn" onclick="closeModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button></div>
+      <div class="fg2">
+        <div class="fg fg-full"><label>耗材名稱 *</label>
+          <input id="f-name" value="${s ? s.name : ''}" placeholder="名稱"></div>
+        <div class="fg"><label>類別</label>
+          <select id="f-cat"><option>貼紮</option><option>耗材</option><option>工具</option><option>其他</option></select></div>
+        <div class="fg"><label>存放位置</label>
+          <input id="f-loc" value="${s ? s.location : ''}" placeholder="例：櫃子的xx"></div>
+        <div class="fg"><label>初始庫存</label>
+          <input id="f-stock" type="number" value="${s ? s.stock : 0}" min="0"></div>
+        <div class="fg"><label>單位</label>
+          <input id="f-unit" value="${s ? s.unit : '個'}" placeholder="個"></div>
+        <div class="fg"><label>低庫存警示值</label>
+          <input id="f-min" type="number" value="${s ? s.min : 5}" min="0"></div>
+        <div class="fg fg-full"><label>備註說明</label>
+          <textarea id="f-notes" rows="2">${s ? s.notes : ''}</textarea></div>
+        <div class="fg fg-full"><label>耗材照片（幫助辨識）</label>
+          <div class="upload-zone" onclick="document.getElementById('fPhoto').click()" id="uploadZone">
+            ${PLACEHOLDER_SVG_SMALL}
+            <p style="margin-top:6px">點擊上傳照片</p>
+          </div>
+          <input type="file" id="fPhoto" accept="image/*" onchange="previewPhoto(this,'fPrev')">
+          <div id="fPrev" class="photo-prev">
+            ${s && s.photo
+              ? `<div style="position:relative;display:inline-block">
+                   <img class="photo-thumb" src="${s.photo}" id="fPrevImg">
+                   <button onclick="clearModalPhoto()" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--red);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1">✕</button>
+                 </div>`
+              : ''}
+          </div>
+        </div>
+      </div>
+      <div class="mf">
+        <button class="btn" onclick="closeModal()">取消</button>
+        <button class="btn btn-primary" onclick="${s ? `saveEdit(${s.id})` : 'saveAdd()'}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 10 17 19 7"/></svg> 儲存</button>
+      </div>`;
+    if (s) document.getElementById('f-cat').value = s.cat;
+
+  } else if (type === 'txn') {
+    const initId = sid || '';
+    inner.innerHTML = `
+      <div class="mh"><h3>記錄出入庫</h3>
+        <button class="mc-btn" onclick="closeModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button></div>
+      <div class="fg"><label>耗材 *</label>
+        <select id="t-item">
+          ${supplies.map(s => `<option value="${s.id}"${s.id === initId ? ' selected' : ''}>${s.name}（${s.stock} ${s.unit}）</option>`).join('')}
+        </select></div>
+      <div class="fg2">
+        <div class="fg"><label>類型 *</label>
+          <select id="t-type"><option value="in">入庫 ＋</option><option value="out">出庫 −</option></select></div>
+        <div class="fg"><label>數量 *</label>
+          <input id="t-qty" type="number" min="1" placeholder="0"></div>
+        <div class="fg"><label>操作人</label>
+          <input id="t-person" placeholder="姓名"></div>
+        <div class="fg"><label>日期</label>
+          <input id="t-date" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+        <div class="fg fg-full"><label>備註</label>
+          <input id="t-note" placeholder="用途、原因…"></div>
+      </div>
+      <div class="mf">
+        <button class="btn" onclick="closeModal()">取消</button>
+        <button class="btn btn-primary" onclick="submitTxn()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 10 17 19 7"/></svg> 確認</button>
+      </div>`;
+  }
+  overlay.classList.add('open');
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+// ─────────────────────────────────────────────
+//  ★ 在這裡填入你的 Apps Script 網址
+// ─────────────────────────────────────────────
+const GS_URL = 'https://script.google.com/macros/s/AKfycbyIzjVBJXHmtcpgTm5viJZs4Er74ZcpWvtkEpC53zhx8TmIlBqYsy9HK0aTfAe5jG21Zg/exec';
+
+// ─────────────────────────────────────────────
+//  Google Sheets API
+// ─────────────────────────────────────────────
+function getGsUrl() {
+  if (!GS_URL || GS_URL.includes('換成你的網址')) {
+    alert('請先在程式碼頂端的 GS_URL 填入正確網址');
+    return null;
+  }
+  return GS_URL;
+}
+async function gsGet(params) {
+  const url = getGsUrl(); if (!url) return null;
+  try {
+    const res = await fetch(url + '?' + new URLSearchParams(params));
+    return await res.json();
+  } catch (e) {
+    addSyncLog('❌ GET 失敗：' + e.message);
+    setGsStatus('err', '連線失敗');
+    return null;
+  }
+}
+async function gsPost(body) {
+  const url = getGsUrl(); if (!url) return null;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(body)
+    });
+    return await res.json();
+  } catch (e) {
+    addSyncLog('❌ POST 失敗：' + e.message);
+    setGsStatus('err', '同步失敗');
+    return null;
+  }
+}
+async function gsTest() {
+  addSyncLog('測試連線中…');
+  const r = await gsGet({ action: 'ping' });
+  if (r && r.status === 'ok') {
+    setGsStatus('ok', '連線成功');
+    addSyncLog('✅ 連線正常');
+    notify('✓ Google Sheets 連線成功');
+  } else if (r) {
+    setGsStatus('err', '回應異常');
+    addSyncLog('⚠️ ' + JSON.stringify(r));
+  }
+}
+async function gsPull() {
+  addSyncLog('載入資料中…');
+  const r = await gsGet({ action: 'getAll' });
+  if (r && r.supplies) {
+    supplies = r.supplies.map(s => ({
+      ...s,
+      stock: Number(s.stock) || 0,
+      min:   Number(s.min)   || 0,
+      id:    Number(s.id)    || 0
+    }));
+    logs   = r.logs || [];
+    nextId = Math.max(...supplies.map(s => s.id), 0) + 1;
+    setGsStatus('ok', '已載入');
+    document.getElementById('gsLastSync').textContent = '上次：' + new Date().toLocaleTimeString();
+    addSyncLog('✅ 載入 ' + supplies.length + ' 項耗材，' + logs.length + ' 筆記錄');
+    renderAll();
+    notify('✓ 已從 Sheets 載入最新資料');
+  } else if (r) {
+    addSyncLog('⚠️ 回應：' + JSON.stringify(r));
+  }
+}
+async function gsPush() {
+  if (isSyncing) { notify('同步中，請稍候…'); return; }
+  clearTimeout(autoSyncTimer);
+  addSyncLog('手動同步…');
+  const ok = await doSync();
+  if (ok) notify('✓ 已同步到 Google Sheets');
+}
+
+// ─────────────────────────────────────────────
+//  照片上傳到 Drive（新增）
+//  先把 base64 送給 Apps Script → 上傳到 Drive → 回傳公開 URL → 存回 supply
+// ─────────────────────────────────────────────
+async function uploadPhotoToDrive(supplyId, base64DataUrl) {
+  const url = GS_URL;
+  if (!url) return null;   // 沒連線就不上傳，保留本地預覽
+  addSyncLog('📷 上傳照片中…');
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'uploadPhoto', id: supplyId, photo: base64DataUrl })
+    });
+    const r = await res.json();
+    if (r && r.url) {
+      addSyncLog('✅ 照片上傳完成');
+      return r.url;
+    } else {
+      addSyncLog('⚠️ 照片上傳失敗：' + JSON.stringify(r));
+      return null;
+    }
+  } catch (e) {
+    addSyncLog('❌ 照片上傳錯誤：' + e.message);
+    return null;
+  }
+}
+
+// 卡片相機按鈕：選完照片後上傳
+async function uploadPhoto(event, id) {
+  const f = event.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = async e => {
+    const base64 = e.target.result;
+    const s = supplies.find(x => x.id === id); if (!s) return;
+    s.photo = base64;
+    renderInventory();
+    const gsUrl = GS_URL;
+    if (gsUrl && !gsUrl.includes('換成你的網址')) {
+      const driveUrl = await uploadPhotoToDrive(id, base64);
+      if (driveUrl) { s.photo = driveUrl; renderInventory(); scheduleSync(); }
+    }
+  };
+  r.readAsDataURL(f);
+}
+
+// Detail panel 的上傳照片（重新整理 panel）
+async function uploadPhotoFromDetail(event, id) {
+  await uploadPhoto(event, id);
+  setTimeout(() => selectItem(id), 300); // 重新渲染 detail panel
+}
+
+// 刪除照片
+function deletePhoto(id) {
+  const s = supplies.find(x => x.id === id); if (!s) return;
+  if (!confirm('確定刪除「' + s.name + '」的照片？')) return;
+  s.photo = '';
+  renderInventory();
+  // 若 detail panel 開著，重新渲染
+  if (selectedId === id) {
+    document.getElementById('detailPanel').classList.remove('open');
+    selectedId = null;
+    setTimeout(() => selectItem(id), 50);
+  }
+  scheduleSync();
+  notify('已刪除照片');
+}
+
+// Modal 裡清除已選照片
+function clearModalPhoto() {
+  pendingPhoto = '';
+  document.getElementById('fPrev').innerHTML = '';
+}
+
+// Modal 裡的照片預覽（保持本地預覽，儲存時一起送）
+function previewPhoto(input, prevId) {
+  const f = input.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    pendingPhoto = e.target.result;
+    document.getElementById(prevId).innerHTML = `<img class="photo-thumb" src="${e.target.result}">`;
+  };
+  r.readAsDataURL(f);
+}
+
+// saveAdd / saveEdit 儲存時，若有 base64 pendingPhoto 且已連線 → 先上傳到 Drive
+async function resolvePhoto(supplyId) {
+  if (!pendingPhoto) return null;
+  if (!pendingPhoto.startsWith('data:')) return pendingPhoto; // 已是 URL，直接用
+  const gsUrl = GS_URL;
+  if (gsUrl) {
+    const driveUrl = await uploadPhotoToDrive(supplyId, pendingPhoto);
+    if (driveUrl) return driveUrl;
+  }
+  return pendingPhoto; // 沒連線就保留 base64（本機看得到，但別人看不到）
+}
+
+// ─────────────────────────────────────────────
+//  自動同步（3 秒防抖）
+// ─────────────────────────────────────────────
+function scheduleSync() {
+  const url = GS_URL;
+  if (!url) return;
+  clearTimeout(autoSyncTimer);
+  autoSyncTimer = setTimeout(() => doSync(), 3000);
+}
+async function doSync(isRetry) {
+  if (isSyncing) {
+    autoSyncTimer = setTimeout(() => doSync(), 2000);
+    return false;
+  }
+  isSyncing = true;
+  addSyncLog((isRetry ? '重試' : '自動') + '同步中…');
+  // base64 照片不送（太大）；Drive URL 正常送
+  const clean = supplies.map(s => ({
+    ...s,
+    photo: s.photo && !s.photo.startsWith('data:') ? s.photo : ''
+  }));
+  const r = await gsPost({ action: 'saveAll', data: { supplies: clean, logs } });
+  isSyncing = false;
+  if (r && r.saved) {
+    setGsStatus('ok', '已同步');
+    document.getElementById('gsLastSync').textContent = '上次：' + new Date().toLocaleTimeString();
+    addSyncLog('✅ 同步完成');
+    return true;
+  } else if (!isRetry) {
+    addSyncLog('⚠️ 失敗，3秒後重試…');
+    setTimeout(() => doSync(true), 3000);
+    return false;
+  } else {
+    setGsStatus('err', '同步失敗');
+    addSyncLog('❌ 重試失敗，請確認部署網址是否為最新版本');
+    return false;
+  }
+}
+
+// ─────────────────────────────────────────────
+//  CRUD：saveAdd / saveEdit 改為 async（照片上傳）
+// ─────────────────────────────────────────────
+async function saveAdd() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) return alert('請輸入耗材名稱');
+  const id = nextId++;
+  const photo = await resolvePhoto(id);
+  const newItem = {
+    id, name,
+    cat:      document.getElementById('f-cat').value,
+    stock:    parseInt(document.getElementById('f-stock').value) || 0,
+    unit:     document.getElementById('f-unit').value || '個',
+    min:      parseInt(document.getElementById('f-min').value) || 5,
+    location: document.getElementById('f-loc').value,
+    notes:    document.getElementById('f-notes').value,
+    photo:    photo || ''
+  };
+  supplies.push(newItem);
+  closeModal();
+  renderAll();
+  scheduleSync();
+  notify('✓ 已新增「' + name + '」');
+}
+async function saveEdit(id) {
+  const s = supplies.find(x => x.id === id); if (!s) return;
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) return alert('請輸入耗材名稱');
+  s.name     = name;
+  s.cat      = document.getElementById('f-cat').value;
+  s.stock    = parseInt(document.getElementById('f-stock').value) || 0;
+  s.unit     = document.getElementById('f-unit').value || '個';
+  s.min      = parseInt(document.getElementById('f-min').value) || 5;
+  s.location = document.getElementById('f-loc').value;
+  s.notes    = document.getElementById('f-notes').value;
+  if (pendingPhoto) s.photo = await resolvePhoto(id) || s.photo;
+  closeModal();
+  selectedId = null;
+  document.getElementById('detailPanel').classList.remove('open');
+  renderAll();
+  scheduleSync();
+  notify('✓ 已更新「' + name + '」');
+}
+
+// ─────────────────────────────────────────────
+//  複製程式碼 & 導航
+// ─────────────────────────────────────────────
+function copyCode() {
+  const code = document.getElementById('codeBlock').innerText;
+  navigator.clipboard.writeText(code)
+    .then(() => notify('✓ 程式碼已複製！'))
+    .catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = code; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      notify('✓ 程式碼已複製！');
+    });
+}
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const pg = btn.dataset.page;
+    document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + pg));
+  });
+});
+
+// 啟動：帶入網址 + 自動載入資料
+renderAll();
+
+async function init() {
+  // 把常數網址填入輸入框（讓使用者看到目前設定）
+  const urlInput = document.getElementById('gsUrl');
+  if (GS_URL && !GS_URL.includes('換成你的網址')) {
+    urlInput.value = GS_URL;
+    urlInput.readOnly = true;  // 已寫死，防止誤改
+    urlInput.style.background = 'var(--bg2)';
+    urlInput.title  = '網址已由管理員設定在程式碼中';
+    addSyncLog('🔗 網址已內建，自動載入中…');
+    await gsPull();
+  }
+}
+init();
+</script>
+</body>
+</html>
